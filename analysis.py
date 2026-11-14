@@ -1,4 +1,7 @@
 import numpy as np  
+import matplotlib.pyplot as plt
+
+
 
 #
 FEATURES = np.array([
@@ -43,29 +46,95 @@ def random_sampling(f, rng, N, sd1, sd2):
         x = rng.uniform(sd1, sd2)
         y = rng.uniform(sd1, sd2)
 
-        if f == f_test:
-            z = f_test(x, y)
-
-        if f == function1:
-            z = function1(x, y)
+        z = f(x, y)
 
         z_values.append(z)
         x_values.append(x)
         y_values.append(y)
 
-    min_index = np.argmin(z_values)
+        min_index = np.argmin(z_values)
 
-    z_min = z_values[min_index]
-    x_min = x_values[min_index]
-    y_min = y_values[min_index]
+        z_min = z_values[min_index]
+        x_min = x_values[min_index]
+        y_min = y_values[min_index]
 
-    return z_min, y_min, x_min
 
-    
 
-    
-        
+    return   x_min, y_min, z_min
+
 
     #dazugehörigen funktionswert bestimmen 
 
-    #
+#plot function
+
+def contour_plot(
+        f,
+        x_low,
+        x_high,
+        y_low,
+        y_high,
+        name,
+        minima
+    ):
+
+    x = np.linspace(x_low, x_high, 300)
+    y = np.linspace(y_low, y_high, 300)
+
+    X, Y = np.meshgrid(x, y)
+
+    Z = f(X, Y)
+
+    # Focus the contour levels on low-value regions
+    levels = np.linspace(
+        np.min(Z),
+        np.percentile(Z, 80),
+        30
+    )
+
+    plt.figure()
+
+    contours = plt.contourf(
+        X,
+        Y,
+        Z,
+        levels=levels,
+        cmap='viridis'
+    )
+
+    plt.contour(
+        X,
+        Y,
+        Z,
+        levels=levels,
+        colors='black',
+        linewidths=0.4
+    )
+
+    plt.colorbar(contours, label='Function value')
+
+    # Mark all known or approximate minima
+    for i, (x_minimum, y_minimum) in enumerate(minima):
+
+        if i == 0:
+            label = 'Reference minima'
+        else:
+            label = None
+
+        plt.plot(
+            x_minimum,
+            y_minimum,
+            marker='*',
+            color='red',
+            markeredgecolor='black',
+            markersize=11,
+            linestyle='none',
+            label=label
+        )
+
+    plt.xlabel('x')
+    plt.ylabel('y')
+    plt.title(f'Contour Plot: {name}')
+    plt.legend()
+    plt.grid()
+
+    plt.show()
