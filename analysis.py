@@ -34,6 +34,7 @@ def f_test(x, y):
     return  x**2 + y**2
 
 
+
 def random_sampling(f, rng, N, sd1, sd2):
 
     z_values = []
@@ -60,7 +61,7 @@ def random_sampling(f, rng, N, sd1, sd2):
 
 
 
-    return   x_min, y_min, z_min
+    return   x_min, y_min, z_min, np.array(x_values), np.array(y_values)
 
 
     #dazugehörigen funktionswert bestimmen 
@@ -74,7 +75,11 @@ def contour_plot(
         y_low,
         y_high,
         name,
-        minima
+        minima,
+        x_samples,
+        y_samples,
+        best_x,
+        best_y
     ):
 
     x = np.linspace(x_low, x_high, 300)
@@ -112,6 +117,24 @@ def contour_plot(
 
     plt.colorbar(contours, label='Function value')
 
+    number_to_plot = min(len(x_samples), 2000)
+
+    sample_indices = np.linspace(
+        0,
+        len(x_samples) - 1,
+        number_to_plot,
+        dtype=int
+    )
+
+    plt.scatter(
+        x_samples[sample_indices],
+        y_samples[sample_indices],
+        s=5,
+        color='white',
+        alpha=0.35,
+        label=f'{number_to_plot} sampled points'
+    )
+
     # Mark all known or approximate minima
     for i, (x_minimum, y_minimum) in enumerate(minima):
 
@@ -131,6 +154,18 @@ def contour_plot(
             label=label
         )
 
+    # mark the best point found by random sampling
+    plt.plot(
+        best_x,
+        best_y,
+        marker='X',
+        color='yellow',
+        markeredgecolor='black',
+        markersize=9,
+        linestyle='none',
+        label='Best sampled point'
+    )
+
     plt.xlabel('x')
     plt.ylabel('y')
     plt.title(f'Contour Plot: {name}')
@@ -138,3 +173,26 @@ def contour_plot(
     plt.grid()
 
     plt.show()
+
+def random_move_hill_climbing(x0, y0,rng, N, length, f):
+
+       z_values = []
+       x_values = []
+       y_values = []
+
+       z = f(x0, y0)
+       z_values.append(z)
+       for i in range(1, N+1):
+            while z >= z_values[i]:
+                x = rng.uniform(x0-length, x0+length)
+                y = rng.uniform(y0-length, y0+length)
+
+                z = f(x, y)
+
+            z_values.append(z)
+            x_values.append(x)
+            y_values.append(y)         
+
+
+
+        

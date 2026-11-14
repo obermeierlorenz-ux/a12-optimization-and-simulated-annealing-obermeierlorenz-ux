@@ -25,7 +25,7 @@ N= 10000
 search_domain1 = -2
 search_domain2 =  2
 
-x_min, y_min, z_min = random_sampling(f_test, rng, N, search_domain1,search_domain2)
+x_min, y_min, z_min, _, _ = random_sampling(f_test, rng, N, search_domain1,search_domain2)
 
 print('minimum z test function:', z_min)
 print('associated x test function:', x_min)
@@ -35,7 +35,7 @@ print('associated y test function:', y_min)
 
 search_domain11 = -2
 search_domain12 =  2
-x_min1, y_min1, z_min1= random_sampling(function1, rng, N, search_domain11, search_domain12)
+x_min1, y_min1, z_min1, x_samples1, y_samples1= random_sampling(function1, rng, N, search_domain11, search_domain12)
 
 
 print()
@@ -71,16 +71,15 @@ function1_minima = [
     (0.974, 0.474)
 ]
 
-
-
-contour_plot(function1, -2, 2, -2, 2, 'fucntion1', function1_minima)
+contour_plot(function1, -2, 2, -2, 2, 'fucntion1',
+              function1_minima, x_samples1, y_samples1, 
+              x_min1, y_min1)
 
 
 #funktion2
-
 search_domain21 = -3
 search_domain22 =  3
-x_min2, y_min2, z_min2 = random_sampling(function2, rng, N, search_domain21, search_domain22)
+x_min2, y_min2, z_min2, x_samples2, y_samples2= random_sampling(function2, rng, N, search_domain21, search_domain22)
 
 print()
 print('minimum z function 2:', z_min2)
@@ -90,25 +89,31 @@ print('associated y  function 2:', y_min2)
 
  
 #f2 approximate well checks
+function2_reference_minima = [
+    (1.64544, -0.69885, -5.8069149),
+    (0.14972, 1.73740, -5.3369602),
+    (-1.84237, -1.34725, -4.6843808),
+    (-1.28987, 0.74622, -4.6492501),
+    (0.15812, -1.79770, -4.0699216),
+    (1.93291, 1.44377, -3.5477975)
+]
+
 reference_wells = [
-    (-1.85, -1.35),
-    (0.15, -1.80),
-    (1.65, -0.70),
-    (-1.30, 0.75),
-    (0.15, 1.75),
-    (1.95, 1.45)
+    (x, y) for x, y, z in function2_reference_minima
 ]
 
 delta = 0.05
-
 print()
-print('Function 2 approximate well checks')
+print('Function 2 reference-minimum checks')
 
-for number, (x_center, y_center) in enumerate(reference_wells, start=1):
+for number, (x_center, y_center, z_reference) in enumerate(
+        function2_reference_minima,
+        start=1
+    ):
 
-    # check the supplied center and four nearby points
+    z_at_reference = function2(x_center, y_center)
+
     nearby_points = [
-        (x_center, y_center),
         (x_center + delta, y_center),
         (x_center - delta, y_center),
         (x_center, y_center + delta),
@@ -120,16 +125,14 @@ for number, (x_center, y_center) in enumerate(reference_wells, start=1):
     for x, y in nearby_points:
         nearby_values.append(function2(x, y))
 
-    lowest_index = np.argmin(nearby_values)
-
-    x_best, y_best = nearby_points[lowest_index]
-    z_best = nearby_values[lowest_index]
+    nearby_minimum = np.min(nearby_values)
 
     print(
         f'Well {number}: '
-        f'best nearby point = ({x_best:.3f}, {y_best:.3f}), '
-        f'f2 = {z_best:.4f}'
+        f'computed = {z_at_reference:.6f}, '
+        f'reference = {z_reference:.6f}, '
+        f'lowest nearby value = {nearby_minimum:.6f}'
     )
-
 #plot
-contour_plot(function2, -3, 3, -3, 3, 'Function 2', reference_wells)
+contour_plot(function2, -3, 3, -3, 3, 'Function 2', reference_wells,
+             x_samples2, y_samples2, x_min2, y_min2)
