@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import argparse
-from optimization import random_sampling, contour_plot, random_move_hill_climbing
+from optimization import random_sampling, contour_plot, random_move_hill_climbing, plot_hill_trajectories, plot_objective_histories, simulated_annealing
 from landscapes import f_test, function1, function2
 #test 
 
@@ -140,26 +140,265 @@ contour_plot(function2, -3, 3, -3, 3, 'Function 2', reference_wells,
 
 
 #Part 3 random move hill climbing
-x0 = 1.4
-y0 = 1.2
-length = 0.02
-M = 10
 
-x_final, y_final, z_final, x_path, y_path, z_path, attempts, reason = random_move_hill_climbing(
+#startingpoints
+
+starts_f1 = [
+    (-1.7, -1.2),
+    (-1.5, 1.5),
+    (-0.2, -1.0),
+    (0.0, 1.2),
+    (1.4, 1.2),     
+    (1.7, -1.5)
+]
+
+starts_f2 = [
+    (-2.5, -2.5),
+    (-2.3, 1.8),
+    (-0.5, -1.8),
+    (0.5, 1.5),
+    (2.4, 1.0),     
+    (2.5, -1.5)
+]
+
+
+def compare_step_lengths(
+        f,
+        x0,
+        y0,
+        x_low,
+        x_high,
+        y_low,
+        y_high,
+        step_sizes,
+        seed
+    ):
+
+
+    print()
+    print('Step-length comparison')
+    print('s | final x | final y | final value | attempts | reason')
+    print('-' * 70)
+
+    for step_size in step_sizes:
+
+        # New generator at the beginning of each comparison run
+        rng_compare = np.random.default_rng(seed)
+
+        result = random_move_hill_climbing(
+            x0,
+            y0,
+            rng_compare,
+            f,
+            x_low,
+            x_high,
+            y_low,
+            y_high,
+            step_size
+        )
+
+        x_final, y_final, z_final, x_path, y_path, z_path, attempts, reason = result
+
+        print(
+            f'{step_size:.3f} | '
+            f'{x_final:7.3f} | '
+            f'{y_final:7.3f} | '
+            f'{z_final:11.6f} | '
+            f'{attempts:8d} | '
+            f'{reason}'
+        )
+
+#test ausführen 
+step_sizes = [0.02, 0.05, 0.1, 0.2]
+
+# Function 1: required starting point
+compare_step_lengths(
+    function1,
     1.4,
     1.2,
-    rng,
+    -2,
+    2,
+    -2,
+    2,
+    step_sizes,
+    args.seed
+)
+
+# Function 2: required starting point
+compare_step_lengths(
+    function2,
+    2.4,
+    1.0,
+    -3,
+    3,
+    -3,
+    3,
+    step_sizes,
+    args.seed
+)
+# step size
+step_size_f1 = 0.05
+step_size_f2 = 0.1
+
+def run_hill_climbing_starts(
+        f,
+        starts,
+        x_low,
+        x_high,
+        y_low,
+        y_high,
+        step_size,
+        rng
+    ):
+
+    runs = []
+
+    for x0, y0 in starts:
+
+        result = random_move_hill_climbing(
+            x0,
+            y0,
+            rng,
+            f,
+            x_low,
+            x_high,
+            y_low,
+            y_high,
+            step_size
+        )
+
+        x_final, y_final, z_final, x_path, y_path, z_path, attempts, reason = result
+
+        run = {
+            'x0': x0,
+            'y0': y0,
+            'x_final': x_final,
+            'y_final': y_final,
+            'z_final': z_final,
+            'x_path': x_path,
+            'y_path': y_path,
+            'z_path': z_path,
+            'attempts': attempts,
+            'reason': reason,
+            'step_size': step_size
+        }
+
+        runs.append(run)
+
+    return runs
+
+runs_f1 = run_hill_climbing_starts(
+    function1,
+    starts_f1,
+    -2,
+    2,
+    -2,
+    2,
+    step_size_f1,
+    rng
+)
+
+runs_f2 = run_hill_climbing_starts(
+    function2,
+    starts_f2,
+    -3,
+    3,
+    -3,
+    3,
+    step_size_f2,
+    rng
+)
+
+def print_hill_climbing_results(name, runs):
+
+    print()
+    print(name)
+    print('run | start x | start y | final x | final y | final value | s | attempts | reason')
+    print('-' * 100)
+
+    for i, run in enumerate(runs, start=1):
+
+        print(
+            f'{i:3d} | '
+            f'{run["x0"]:7.3f} | '
+            f'{run["y0"]:7.3f} | '
+            f'{run["x_final"]:7.3f} | '
+            f'{run["y_final"]:7.3f} | '
+            f'{run["z_final"]:11.6f} | '
+            f'{run["step_size"]:5.3f} | '
+            f'{run["attempts"]:8d} | '
+            f'{run["reason"]}'
+        )
+
+print_hill_climbing_results('Function 1 hill climbing', runs_f1)
+print_hill_climbing_results('Function 2 hill climbing', runs_f2)
+
+#plot 
+
+plot_hill_trajectories(
     function1,
     -2,
     2,
     -2,
     2,
-    step_size=0.02
+    runs_f1,
+    'Function 1'
 )
-print ()
-print('Random-move hill climbing method')
-print('final x:', x_final)
-print('final y:', y_final)
-print('final value:', z_final)
-print('attempted steps:', attempts)
-print('stopping reason:', reason)
+
+plot_hill_trajectories(
+    function2,
+    -3,
+    3,
+    -3,
+    3,
+    runs_f2,
+    'Function 2'
+)
+
+#plto history
+
+plot_objective_histories(runs_f1, 'Function 1')
+plot_objective_histories(runs_f2, 'Function 2')
+
+
+#part 4 annealing
+
+#test for Function 1
+rng_annealing = np.random.default_rng(args.seed)
+
+T0 = 1.0
+alpha = 0.999
+Tmin = 1e-3
+
+result = simulated_annealing(
+    1.0, 0.5, 
+    rng_annealing,
+    function1,
+    -2, 2, -2, 2, 
+    step_size_f1,
+    T0,
+    alpha,
+    Tmin,
+    N_max=10000,
+    W=100,
+    eps=1e-4
+)
+
+(
+    x_final, y_final, z_final,
+    best_x, best_y, best_z,
+    x_path, y_path, z_path,
+    best_z_path, temperature_values,
+    attempts, final_temperature,
+    reason
+) = result
+
+print()
+print('Simulated annealing test: Function 1')
+print(f'Final point: ({x_final:.5f}, {y_final:.5f})')
+print(f'Final value: {z_final:.6f}')
+print(f'Best point: ({best_x:.5f}, {best_y:.5f})')
+print(f'Best value: {best_z:.6f}')
+print(f'Final temperature: {final_temperature:.6f}')
+print(f'Attempts: {attempts}')
+print(f'Stopping reason: {reason}')
