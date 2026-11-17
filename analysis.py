@@ -4,7 +4,8 @@ import argparse
 from optimization import (random_sampling, contour_plot, random_move_hill_climbing, plot_hill_trajectories,
                         plot_objective_histories, simulated_annealing, compare_annealing_schedules,
                         plot_annealing_schedule_trajectories, plot_annealing_schedule_histories,
-                        run_annealing_starts, print_annealing_results)
+                        run_annealing_starts, print_annealing_results,  hill_climbing_ensemble,
+                        annealing_ensemble, plot_best_point_heatmaps, plot_best_value_histograms)
 from landscapes import f_test, function1, function2
 #test 
 
@@ -568,3 +569,136 @@ print('Function 1 hill-climbing value:', hill_f1[2])
 print('Function 1 annealing best value:', anneal_f1[5])
 print('Function 2 hill-climbing value:', hill_f2[2])
 print('Function 2 annealing best value:', anneal_f2[5])
+
+
+
+
+# part 5:common initial positions
+N_ensemble = 1000
+
+#unterschiedliche seeds
+rng_ensemble = np.random.default_rng(args.seed + 5000)
+
+starts_ensemble_f1 = rng_ensemble.uniform(
+    -2, 2,
+    size=(N_ensemble, 2)
+)
+
+starts_ensemble_f2 = rng_ensemble.uniform(
+    -3, 3,
+    size=(N_ensemble, 2)
+)
+
+print()
+print('Part 5 initial positions created')
+print('Function 1:', len(starts_ensemble_f1))
+print('Function 2:', len(starts_ensemble_f2))
+
+
+rng_hill_ensemble = np.random.default_rng(args.seed + 6000)
+
+hill_points_f1, hill_values_f1 = hill_climbing_ensemble(
+    function1,
+    starts_ensemble_f1,
+    -2, 2, -2, 2,
+    step_size_f1,
+    rng_hill_ensemble
+)
+
+hill_points_f2, hill_values_f2 = hill_climbing_ensemble(
+    function2,
+    starts_ensemble_f2,
+    -3, 3, -3, 3,
+    step_size_f2,
+    rng_hill_ensemble
+)
+
+print()
+print('Hill-climbing ensemble completed')
+
+#annealing_ensemble 
+rng_annealing_ensemble = np.random.default_rng(args.seed + 7000)
+
+annealing_f1 = {}
+annealing_f2 = {}
+
+for name, T0, alpha in schedules_f1:
+
+    annealing_f1[name] = annealing_ensemble(
+        function1,
+        starts_ensemble_f1,
+        -2, 2, -2, 2,
+        step_size_f1,
+        T0, alpha,
+        rng_annealing_ensemble
+    )
+
+for name, T0, alpha in schedules_f2:
+
+    annealing_f2[name] = annealing_ensemble(
+        function2,
+        starts_ensemble_f2,
+        -3, 3, -3, 3,
+        step_size_f2,
+        T0, alpha,
+        rng_annealing_ensemble
+    )
+
+print('Annealing ensembles completed')
+
+#ensemble runs
+best_points_f1 = {
+    'Hill Climbing': hill_points_f1,
+    'Low initial temperature': annealing_f1['low initial temperature'][0],
+    'Sustained exploration': annealing_f1['sustained exploration'][0],
+    'Rapid cooling': annealing_f1['rapid cooling'][0]
+}
+
+best_points_f2 = {
+    'Hill Climbing': hill_points_f2,
+    'Low initial temperature': annealing_f2['low initial temperature'][0],
+    'Sustained exploration': annealing_f2['sustained exploration'][0],
+    'Rapid cooling': annealing_f2['rapid cooling'][0]
+}
+
+plot_best_point_heatmaps(
+    best_points_f1,
+    -2, 2, -2, 2,
+    function1_minima,
+    'Function 1'
+)
+
+plot_best_point_heatmaps(
+    best_points_f2,
+    -3, 3, -3, 3,
+    reference_wells,
+    'Function 2'
+)
+
+#best histograms
+
+best_values_f1 = {
+    'Hill Climbing': hill_values_f1,
+    'Low initial temperature': annealing_f1['low initial temperature'][1],
+    'Sustained exploration': annealing_f1['sustained exploration'][1],
+    'Rapid cooling': annealing_f1['rapid cooling'][1]
+}
+
+best_values_f2 = {
+    'Hill Climbing': hill_values_f2,
+    'Low initial temperature': annealing_f2['low initial temperature'][1],
+    'Sustained exploration': annealing_f2['sustained exploration'][1],
+    'Rapid cooling': annealing_f2['rapid cooling'][1]
+}
+
+plot_best_value_histograms(
+    best_values_f1,
+    global_minimum=-0.2024,
+    name='Function 1'
+)
+
+plot_best_value_histograms(
+    best_values_f2,
+    global_minimum=-5.8069149,
+    name='Function 2'
+)

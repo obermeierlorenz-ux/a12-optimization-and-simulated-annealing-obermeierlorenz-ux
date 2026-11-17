@@ -649,3 +649,170 @@ def print_annealing_results(name, runs):
             f'{run["final_temperature"]:7.5f} | '
             f'{run["reason"]}'
         )
+
+#part 5
+def hill_climbing_ensemble(
+        f, starts,
+        x_low, x_high, y_low, y_high,
+        step_size, rng
+    ):
+
+    best_points = np.empty((len(starts), 2))
+    best_values = np.empty(len(starts))
+
+    for i, (x0, y0) in enumerate(starts):
+
+        result = random_move_hill_climbing(
+            x0, y0, rng, f,
+            x_low, x_high, y_low, y_high,
+            step_size,
+            N_max=10000,
+            W=100,
+            eps=1e-4
+        )
+
+        x_final, y_final, z_final, _, _, _, _, _ = result
+
+        best_points[i] = [x_final, y_final]
+        best_values[i] = z_final
+
+    return best_points, best_values
+
+def annealing_ensemble(
+        f, starts,
+        x_low, x_high, y_low, y_high,
+        step_size, T0, alpha, rng
+    ):
+
+    best_points = np.empty((len(starts), 2))
+    best_values = np.empty(len(starts))
+
+    for i, (x0, y0) in enumerate(starts):
+
+        result = simulated_annealing(
+            x0, y0, rng, f,
+            x_low, x_high, y_low, y_high,
+            step_size, T0, alpha, 1e-3,
+            N_max=10000,
+            W=100,
+            eps=1e-4
+        )
+
+        best_x = result[3]
+        best_y = result[4]
+        best_z = result[5]
+
+        best_points[i] = [best_x, best_y]
+        best_values[i] = best_z
+
+    return best_points, best_values
+
+#heatmaps
+def plot_best_point_heatmaps(
+        best_point_sets,
+        x_low, x_high, y_low, y_high,
+        minima,
+        name
+    ):
+
+    x_edges = np.linspace(x_low, x_high, 31)
+    y_edges = np.linspace(y_low, y_high, 31)
+
+    histograms = {}
+
+    for label, points in best_point_sets.items():
+
+        histogram, _, _ = np.histogram2d(
+            points[:, 0],
+            points[:, 1],
+            bins=[x_edges, y_edges]
+        )
+
+        histograms[label] = histogram
+
+    maximum_count = max(
+        np.max(histogram)
+        for histogram in histograms.values()
+    )
+
+    fig, axes = plt.subplots(2, 2, figsize=(10, 8))
+    axes = axes.ravel()
+
+    for i, (label, histogram) in enumerate(histograms.items()):
+
+        image = axes[i].pcolormesh(
+            x_edges,
+            y_edges,
+            histogram.T,
+            cmap='viridis',
+            vmin=0,
+            vmax=maximum_count,
+            shading='auto'
+        )
+
+        for x_min, y_min in minima:
+            axes[i].plot(
+                x_min,
+                y_min,
+                marker='*',
+                color='red',
+                markeredgecolor='black',
+                markersize=10
+            )
+
+        axes[i].set_xlim(x_low, x_high)
+        axes[i].set_ylim(y_low, y_high)
+        axes[i].set_xlabel('x')
+        axes[i].set_ylabel('y')
+        axes[i].set_title(label)
+
+        fig.colorbar(image, ax=axes[i], label='Count')
+
+    fig.suptitle(f'Best-Point Locations: {name}')
+    plt.tight_layout()
+    plt.show()
+
+#best histogramm 
+def plot_best_value_histograms(
+        best_value_sets,
+        global_minimum,
+        name
+    ):
+
+    all_values = np.concatenate(
+        list(best_value_sets.values())
+    )
+
+    bins = np.linspace(
+        np.min(all_values),
+        np.max(all_values),
+        50
+    )
+
+    plt.figure(figsize=(8, 5))
+
+    for label, values in best_value_sets.items():
+
+        plt.hist(
+            values,
+            bins=bins,
+            density=True,
+            histtype='step',
+            linewidth=1.8,
+            label=label
+        )
+
+    plt.axvline(
+        global_minimum,
+        color='black',
+        linestyle='--',
+        label='Global minimum'
+    )
+
+    plt.xlabel('Best objective value')
+    plt.ylabel('Probability density')
+    plt.title(f'Distribution of Best Values: {name}')
+    plt.grid()
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
