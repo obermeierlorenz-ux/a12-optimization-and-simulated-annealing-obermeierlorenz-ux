@@ -266,7 +266,7 @@ def plot_hill_trajectories(
 
     plt.xlabel('x')
     plt.ylabel('y')
-    plt.title(f'Hill-Climbing Trajectories: {name}')
+    plt.title(f'Trajectories: {name}')
     plt.legend()
     plt.grid()
 
@@ -392,8 +392,260 @@ def simulated_annealing(x0, y0, rng, f,
         stop_reason
     )
 
-#delta f> 0 accept with probability
+#for compareson 
 
-#T0 move and cool after every attemped
+def compare_annealing_schedules(
+        f,
+        x0, y0,
+        x_low, x_high, y_low, y_high,
+        step_size,
+        schedules,
+        seed,
+        name
+    ):
 
-#track current state and best point encountered
+    all_schedule_runs = {}
+
+    print()
+    print(f'Simulated-annealing schedule comparison: {name}')
+    print(
+        'schedule | run | final value | best value | '
+        'attempts | final T | reason'
+    )
+    print('-' * 95)
+
+    for schedule_number, (schedule_name, T0, alpha) in enumerate(schedules):
+
+        schedule_runs = []
+
+        for run_number in range(6):
+
+            # New generator: independent but reproducible run
+            rng_run = np.random.default_rng(
+                seed + 1000 * schedule_number + run_number
+            )
+
+            result = simulated_annealing(
+                x0, y0,
+                rng_run,
+                f,
+                x_low, x_high, y_low, y_high,
+                step_size,
+                T0,
+                alpha,
+                Tmin=1e-3,
+                N_max=10000,
+                W=100,
+                eps=1e-4
+            )
+
+            (
+                x_final, y_final, z_final,
+                best_x, best_y, best_z,
+                x_path, y_path, z_path,
+                best_z_path, temperature_values,
+                attempts, final_temperature,
+                reason
+            ) = result
+
+            run = {
+                'schedule': schedule_name,
+                'T0': T0,
+                'alpha': alpha,
+                'x0': x0,
+                'y0': y0,
+                'x_final': x_final,
+                'y_final': y_final,
+                'z_final': z_final,
+                'best_x': best_x,
+                'best_y': best_y,
+                'best_z': best_z,
+                'x_path': x_path,
+                'y_path': y_path,
+                'z_path': z_path,
+                'best_z_path': best_z_path,
+                'temperature_values': temperature_values,
+                'attempts': attempts,
+                'final_temperature': final_temperature,
+                'reason': reason
+            }
+
+            schedule_runs.append(run)
+
+            print(
+                f'{schedule_name:20s} | '
+                f'{run_number + 1:3d} | '
+                f'{z_final:11.6f} | '
+                f'{best_z:10.6f} | '
+                f'{attempts:8d} | '
+                f'{final_temperature:7.5f} | '
+                f'{reason}'
+            )
+
+        all_schedule_runs[schedule_name] = schedule_runs
+
+    return all_schedule_runs
+
+#plot
+def plot_annealing_schedule_trajectories(
+        f,
+        x_low, x_high, y_low, y_high,
+        representative_runs,
+        name
+    ):
+
+    x_grid = np.linspace(x_low, x_high, 300)
+    y_grid = np.linspace(y_low, y_high, 300)
+
+    X, Y = np.meshgrid(x_grid, y_grid)
+    Z = f(X, Y)
+
+    levels = np.linspace(np.min(Z), np.percentile(Z, 80), 30)
+
+    plt.figure(figsize=(8, 6))
+
+    contour = plt.contourf(X, Y, Z, levels=levels, cmap='viridis')
+    plt.contour(X, Y, Z, levels=levels, colors='black', linewidths=0.4)
+    plt.colorbar(contour, label='Function value')
+
+    for i, run in enumerate(representative_runs):
+
+        plt.plot(
+            run['x_path'],
+            run['y_path'],
+            linewidth=1.2,
+            label=run['schedule']
+        )
+
+        plt.plot(
+            run['x0'],
+            run['y0'],
+            marker='o',
+            color='black',
+            markersize=6,
+            linestyle='none',
+            label='Start point' if i == 0 else None
+        )
+
+        plt.plot(
+            run['x_final'],
+            run['y_final'],
+            marker='X',
+            color='black',
+            markersize=7,
+            linestyle='none',
+            label='Final point' if i == 0 else None
+        )
+
+    plt.xlabel('x')
+    plt.ylabel('y')
+    plt.title(f'Simulated Annealing Trajectories: {name}')
+    plt.grid()
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+#plot history
+def plot_annealing_schedule_histories(
+        representative_runs,
+        global_minimum,
+        initial_value,
+        name
+    ):
+
+    plt.figure(figsize=(8, 5))
+
+    for run in representative_runs:
+
+        attempts = np.arange(len(run['z_path']))
+
+        plt.plot(
+            attempts,
+            run['z_path'],
+            label=run['schedule']
+        )
+
+    plt.axhline(
+        global_minimum,
+        color='black',
+        linestyle='--',
+        label='Global minimum'
+    )
+
+    plt.axhline(
+        initial_value,
+        color='gray',
+        linestyle=':',
+        label='Initial value'
+    )
+
+    plt.xlabel('Attempted step')
+    plt.ylabel('Current objective value')
+    plt.title(f'Simulated Annealing Objective History: {name}')
+    plt.grid()
+    plt.legend()
+    plt.tight_layout()
+    plt.show()
+
+
+# functions for print
+def run_annealing_starts(
+        f, starts,
+        x_low, x_high, y_low, y_high,
+        step_size, T0, alpha, seed
+    ):
+
+    runs = []
+
+    for i, (x0, y0) in enumerate(starts):
+
+        rng_run = np.random.default_rng(seed + i)
+
+        result = simulated_annealing(
+            x0, y0, rng_run, f,
+            x_low, x_high, y_low, y_high,
+            step_size, T0, alpha, 1e-3,
+            N_max=10000, W=100, eps=1e-4
+        )
+
+        (
+            x_final, y_final, z_final,
+            best_x, best_y, best_z,
+            x_path, y_path, z_path,
+            best_z_path, temperature_values,
+            attempts, final_temperature, reason
+        ) = result
+
+        runs.append({
+            'x0': x0, 'y0': y0,
+            'x_final': x_final, 'y_final': y_final,
+            'z_final': z_final,
+            'best_x': best_x, 'best_y': best_y,
+            'best_z': best_z,
+            'x_path': x_path, 'y_path': y_path,
+            'z_path': z_path,
+            'attempts': attempts,
+            'final_temperature': final_temperature,
+            'reason': reason,
+            'step_size': step_size
+        })
+
+    return runs
+
+
+def print_annealing_results(name, runs):
+
+    print()
+    print(name)
+    print('run | final value | best value | attempts | final T | reason')
+    print('-' * 80)
+
+    for i, run in enumerate(runs, start=1):
+        print(
+            f'{i:3d} | '
+            f'{run["z_final"]:11.6f} | '
+            f'{run["best_z"]:10.6f} | '
+            f'{run["attempts"]:8d} | '
+            f'{run["final_temperature"]:7.5f} | '
+            f'{run["reason"]}'
+        )

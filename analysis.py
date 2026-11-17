@@ -1,7 +1,10 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import argparse
-from optimization import random_sampling, contour_plot, random_move_hill_climbing, plot_hill_trajectories, plot_objective_histories, simulated_annealing
+from optimization import (random_sampling, contour_plot, random_move_hill_climbing, plot_hill_trajectories,
+                        plot_objective_histories, simulated_annealing, compare_annealing_schedules,
+                        plot_annealing_schedule_trajectories, plot_annealing_schedule_histories,
+                        run_annealing_starts, print_annealing_results)
 from landscapes import f_test, function1, function2
 #test 
 
@@ -402,3 +405,166 @@ print(f'Best value: {best_z:.6f}')
 print(f'Final temperature: {final_temperature:.6f}')
 print(f'Attempts: {attempts}')
 print(f'Stopping reason: {reason}')
+
+
+
+#compare the three tempretures
+schedules_f1 = [
+    ('low initial temperature', 0.05, 0.999),
+    ('sustained exploration', 1.0, 0.999),
+    ('rapid cooling', 1.0, 0.99)
+]
+
+schedules_f2 = [
+    ('low initial temperature', 0.1, 0.999),
+    ('sustained exploration', 3.0, 0.999),
+    ('rapid cooling', 3.0, 0.99)
+]
+
+schedule_results_f1 = compare_annealing_schedules(
+    function1,
+    1.0, 0.5,           
+    -2, 2, -2, 2,
+    step_size_f1,
+    schedules_f1,
+    args.seed,
+    'Function 1'
+)
+
+schedule_results_f2 = compare_annealing_schedules(
+    function2,
+    1.95, 1.45,           
+    -3, 3, -3, 3,
+    step_size_f2,
+    schedules_f2,
+    args.seed,
+    'Function 2'
+)
+
+
+
+# one representative run from each Function-1 schedule
+representative_f1 = [
+    schedule_results_f1['low initial temperature'][0],
+    schedule_results_f1['sustained exploration'][0],
+    schedule_results_f1['rapid cooling'][0]
+]
+
+# For Function 2, use a sustained-exploration run which escaped
+representative_f2 = [
+    schedule_results_f2['low initial temperature'][0],
+    schedule_results_f2['sustained exploration'][1],
+    schedule_results_f2['rapid cooling'][0]
+]
+
+plot_annealing_schedule_trajectories(
+    function1,
+    -2, 2, -2, 2,
+    representative_f1,
+    'Function 1'
+)
+
+plot_annealing_schedule_histories(
+    representative_f1,
+    global_minimum=-0.2024,
+    initial_value=function1(1.0, 0.5),
+    name='Function 1'
+)
+
+plot_annealing_schedule_trajectories(
+    function2,
+    -3, 3, -3, 3,
+    representative_f2,
+    'Function 2'
+)
+
+plot_annealing_schedule_histories(
+    representative_f2,
+    global_minimum=-5.8069149,
+    initial_value=function2(1.95, 1.45),
+    name='Function 2'
+)
+
+
+
+
+annealing_runs_f1 = run_annealing_starts(
+    function1, starts_f1,
+    -2, 2, -2, 2,
+    step_size_f1,
+    T0=1.0, alpha=0.999,
+    seed=args.seed
+)
+
+annealing_runs_f2 = run_annealing_starts(
+    function2, starts_f2,
+    -3, 3, -3, 3,
+    step_size_f2,
+    T0=3.0, alpha=0.999,
+    seed=args.seed
+)
+
+print_annealing_results(
+    'Function 1: selected annealing schedule',
+    annealing_runs_f1
+)
+
+print_annealing_results(
+    'Function 2: selected annealing schedule',
+    annealing_runs_f2
+)
+
+#plots 
+
+plot_hill_trajectories(
+    function1, -2, 2, -2, 2,
+    annealing_runs_f1,
+    'Function 1 Simulated Annealing'
+)
+
+plot_objective_histories(
+    annealing_runs_f1,
+    'Function 1 Simulated Annealing'
+)
+
+plot_hill_trajectories(
+    function2, -3, 3, -3, 3,
+    annealing_runs_f2,
+    'Function 2 Simulated Annealing'
+)
+
+plot_objective_histories(
+    annealing_runs_f2,
+    'Function 2 Simulated Annealing'
+)
+
+#comparison 
+
+hill_f1 = random_move_hill_climbing(
+    1.0, 0.5, np.random.default_rng(args.seed),
+    function1, -2, 2, -2, 2, step_size_f1
+)
+
+anneal_f1 = simulated_annealing(
+    1.0, 0.5, np.random.default_rng(args.seed),
+    function1, -2, 2, -2, 2,
+    step_size_f1, 1.0, 0.999, 1e-3
+)
+
+hill_f2 = random_move_hill_climbing(
+    1.95, 1.45, np.random.default_rng(args.seed),
+    function2, -3, 3, -3, 3, step_size_f2
+)
+
+anneal_f2 = simulated_annealing(
+    1.95, 1.45, np.random.default_rng(args.seed),
+    function2, -3, 3, -3, 3,
+    step_size_f2, 3.0, 0.999, 1e-3
+)
+
+print()
+print('Shallow-well comparison')
+print('Function 1 hill-climbing value:', hill_f1[2])
+print('Function 1 annealing best value:', anneal_f1[5])
+print('Function 2 hill-climbing value:', hill_f2[2])
+print('Function 2 annealing best value:', anneal_f2[5])
