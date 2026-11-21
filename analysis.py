@@ -92,6 +92,46 @@ print('associated x function 2:', x_min2)
 print('associated y  function 2:', y_min2)
 
 
+
+#sample counts 
+sample_counts = [1_000, 10_000]
+
+rng_sample_counts = np.random.default_rng(args.seed + 100)
+
+print()
+print('Random-sampling sample-count comparison')
+
+for sample_count in sample_counts:
+
+    x_best1, y_best1, z_best1, _, _ = random_sampling(
+        function1,
+        rng_sample_counts,
+        sample_count,
+        -2,
+        2
+    )
+
+    x_best2, y_best2, z_best2, _, _ = random_sampling(
+        function2,
+        rng_sample_counts,
+        sample_count,
+        -3,
+        3
+    )
+
+    print()
+    print(f'N = {sample_count}')
+    print(
+        f'Function 1: best point = '
+        f'({x_best1:.4f}, {y_best1:.4f}), '
+        f'value = {z_best1:.6f}'
+    )
+    print(
+        f'Function 2: best point = '
+        f'({x_best2:.4f}, {y_best2:.4f}), '
+        f'value = {z_best2:.6f}'
+    )
+
  
 #f2 approximate well checks
 function2_reference_minima = [
@@ -469,7 +509,8 @@ plot_annealing_schedule_histories(
     representative_f1,
     global_minimum=-0.2024,
     initial_value=function1(1.0, 0.5),
-    name='Function 1'
+    name='Function 1',
+    shallow_minimum=0.1974
 )
 
 plot_annealing_schedule_trajectories(

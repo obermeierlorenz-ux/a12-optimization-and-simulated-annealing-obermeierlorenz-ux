@@ -2,8 +2,45 @@ import numpy as np
 import matplotlib.pyplot as plt
 from landscapes import function1, function2, f_test
 
+#validation
+def validate_search_parameters(
+        x_low, x_high, y_low, y_high,
+        step_size=None, N_max=None, W=None, eps=None,
+        T0=None, alpha=None, Tmin=None
+    ):
+
+    if x_low >= x_high or y_low >= y_high:
+        raise ValueError('Domain limits must satisfy low < high.')
+
+    if step_size is not None and step_size <= 0:
+        raise ValueError('step_size must be positive.')
+
+    if N_max is not None and N_max <= 0:
+        raise ValueError('N_max must be positive.')
+
+    if W is not None and (W <= 0 or W > N_max):
+        raise ValueError('W must be positive and no larger than N_max.')
+
+    if eps is not None and eps < 0:
+        raise ValueError('eps must be non-negative.')
+
+    if T0 is not None and T0 <= 0:
+        raise ValueError('T0 must be positive.')
+
+    if Tmin is not None and (Tmin <= 0 or Tmin >= T0):
+        raise ValueError('Tmin must satisfy 0 < Tmin < T0.')
+
+    if alpha is not None and not 0 < alpha < 1:
+        raise ValueError('alpha must satisfy 0 < alpha < 1.')
+    
 
 def random_sampling(f, rng, N, sd1, sd2):
+
+    if not isinstance(N, (int, np.integer)) or N <= 0:
+        raise ValueError('N must be a positive integer.')
+
+    if sd1 >= sd2:
+        raise ValueError('Sampling limits must satisfy sd1 < sd2.')
 
     z_values = []
     x_values = []
@@ -145,6 +182,14 @@ def contour_plot(
 def random_move_hill_climbing(x0, y0,rng, f, x_low, x_high, y_low, y_high,
                               step_size, N_max=10000, W=100, eps= 1e-4):
 
+
+    validate_search_parameters(
+        x_low, x_high, y_low, y_high,
+        step_size=step_size,
+        N_max=N_max,
+        W=W,
+        eps=eps
+    )
     x = x0
     y = y0
     z = f(x, y)
@@ -305,6 +350,18 @@ def simulated_annealing(x0, y0, rng, f,
                         step_size, T0, alpha, Tmin,
                         N_max = 10000, W=100, eps=1e-4):
 
+
+    validate_search_parameters(
+        x_low, x_high, y_low, y_high,
+        step_size=step_size,
+        N_max=N_max,
+        W=W,
+        eps=eps,
+        T0=T0,
+        alpha=alpha,
+        Tmin=Tmin
+    )
+    
     #current state
     x = x0
     y = y0
@@ -550,7 +607,8 @@ def plot_annealing_schedule_histories(
         representative_runs,
         global_minimum,
         initial_value,
-        name
+        name,
+        shallow_minimum=None
     ):
 
     plt.figure(figsize=(8, 5))
@@ -563,6 +621,15 @@ def plot_annealing_schedule_histories(
             attempts,
             run['z_path'],
             label=run['schedule']
+        )
+
+    if shallow_minimum is not None:
+
+        plt.axhline(
+            shallow_minimum,
+            color='tab:red',
+            linestyle=':',
+            label='Shallow minimum'
         )
 
     plt.axhline(
